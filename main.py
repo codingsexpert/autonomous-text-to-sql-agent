@@ -79,11 +79,35 @@ def clean_sql(raw):
     return text.strip().strip("`").rstrip(";").strip("`").strip()
 
 
+CACHE_FILE = "query_cache.json"
+
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_cache(cache_data):
+    with open(CACHE_FILE, "w") as f:
+        json.dump(cache_data, f, indent=4)
+
 def generate_and_heal_sql(question, schema, llm, conn, max_retries=3, chat_history=None):
     """
     Generates SQL, executes it, and self-heals if there are SQL errors.
-    Returns (final_sql, df, retries_used, exec_time_ms, final_error)
+    Returns (final_sql, df, retries_used, exec_time_ms, final_error, is_cached)
     """
+    # 1. Check Exact Match Cache (0ms Latency)
+    cache = load_cache()
+    q_key = question.strip().lower()
+    
+    if q_key in cache:
+        cached_sql = cache[q_key]
+        df, err, t_ms = run_sql(conn, cached_sql)
+        if err is None:
+            # Cache Hit Success
+            return cached_sql, df, 0, t_ms, None, True
+            
+    # Cache Miss - Generate using LLM
     system_msg = SystemMessage(content=(
         "You are an expert text-to-SQL generator. Given a database schema and a question, "
         "return a single SQL query that answers it. Use SQLite syntax. "
@@ -111,8 +135,10 @@ def generate_and_heal_sql(question, schema, llm, conn, max_retries=3, chat_histo
         df, err, t_ms = run_sql(conn, cleaned_sql)
         
         if err is None:
-            # Success!
-            return cleaned_sql, df, attempt, t_ms, None
+            # Success! Save to cache
+            cache[q_key] = cleaned_sql
+            save_cache(cache)
+            return cleaned_sql, df, attempt, t_ms, None, False
         
         # Failed, self-heal
         if attempt < max_retries:
@@ -121,9 +147,9 @@ def generate_and_heal_sql(question, schema, llm, conn, max_retries=3, chat_histo
             print(f"      [Retry {attempt+1}/{max_retries}] Fixing error: {err.splitlines()[-1][:60]}...")
         else:
             # Out of retries
-            return cleaned_sql, None, attempt, t_ms, err
+            return cleaned_sql, None, attempt, t_ms, err, False
 
-    return "", None, max_retries, 0.0, "max_retries_exceeded"
+    return "", None, max_retries, 0.0, "max_retries_exceeded", False
 
 
 def run_sql(conn, sql):

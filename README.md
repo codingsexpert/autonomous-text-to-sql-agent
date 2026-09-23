@@ -114,3 +114,20 @@ This will:
 2. Generate SQL using the configured LLMs.
 3. Compare the executed output with ground-truth values via `evaluator.py`.
 4. Export detailed execution accuracy metrics to `eval_results.csv`.
+
+---
+
+## System Architecture & Scalability Optimizations ⚡
+This project is built mimicking **Production-Grade Data Engineering Systems**. It includes several advanced optimization strategies for latency reduction and LLM safety:
+
+### 1. In-Memory Exact Match Caching
+Eliminates LLM latency for repeated analytical queries. If a question exists in `query_cache.json`, the SQL is fetched and executed instantly in `0.0ms` (LLM bypassed).
+
+### 2. Query Performance Optimizer (AI DBA)
+Features an **Actor-Critic (Multi-Agent) Pattern**. A secondary LLM pass acts as a Senior Database Administrator to evaluate the execution plan of generated queries, exposing bottlenecks (e.g. redundant subqueries) and recommending index creation.
+
+### 3. Query Security Guardrails
+Text-to-SQL agents are vulnerable to prompt-injection that can execute destructive commands. This agent implements strict application-level guardrails that block `DROP`, `DELETE`, `UPDATE`, `INSERT`, and `ALTER` operations before execution, maintaining a strict Read-Only environment.
+
+### 4. Smart Chart Render Engine
+Implements a dynamic rendering engine that infers SQLite Object output types, coerces datatypes, and automatically generates **Plotly Donut/Bar/Area Charts** optimized with Viridis and Pastel themes based on categorical volume.

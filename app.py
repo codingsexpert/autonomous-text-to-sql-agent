@@ -94,12 +94,15 @@ if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
             
             try:
                 # Call our core agentic logic with chat_history
-                sql, df, retries, exec_time, err = generate_and_heal_sql(
+                sql, df, retries, exec_time, err, is_cached = generate_and_heal_sql(
                     prompt, schema, llm, conn, chat_history=st.session_state.lc_history
                 )
                 
                 if df is not None:
-                    response_text = f"Data fetched successfully in {exec_time:.2f} ms with {retries} retries."
+                    if is_cached:
+                        response_text = f"⚡ **Cache Hit!** Data fetched instantly in {exec_time:.2f} ms (LLM bypassed)."
+                    else:
+                        response_text = f"Data fetched successfully in {exec_time:.2f} ms with {retries} retries."
                     st.success(response_text)
                     st.code(sql, language="sql")
                     st.dataframe(df, use_container_width=True)
