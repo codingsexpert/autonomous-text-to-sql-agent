@@ -52,7 +52,7 @@ if "lc_history" not in st.session_state:
     st.session_state.lc_history = []
 
 # Display chat messages from history on app rerun
-for msg in st.session_state.messages:
+for idx, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if "sql" in msg:
@@ -61,9 +61,20 @@ for msg in st.session_state.messages:
             st.dataframe(msg["df"], use_container_width=True)
         if "fig" in msg and msg["fig"] is not None:
             st.plotly_chart(msg["fig"], use_container_width=True)
-        if "insights" in msg and msg["insights"]:
-            with st.expander("💡 Query Performance Insights"):
-                st.markdown(msg["insights"])
+            
+        # Lazy Loading of Insights
+        if msg["role"] == "assistant" and "sql" in msg and msg["df"] is not None:
+            if "insights" in msg and msg["insights"]:
+                with st.expander("💡 Query Performance Insights"):
+                    st.markdown(msg["insights"])
+            else:
+                if st.button("Analyze Query Performance 💡", key=f"analyze_{idx}"):
+                    with st.spinner("Analyzing query performance..."):
+                        llm = make_llm(selected_slug)
+                        schema = load_schema()
+                        insights = analyze_query_performance(msg["sql"], schema, llm)
+                        msg["insights"] = insights
+                        st.rerun()
 
 # Main interface for chat input
 if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
@@ -138,13 +149,6 @@ if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
                                               margin=dict(t=50, l=20, r=20, b=20))
                             st.plotly_chart(fig, use_container_width=True)
                             
-                    # --- QUERY PERFORMANCE OPTIMIZER ---
-                    with st.spinner("Analyzing query performance..."):
-                        insights = analyze_query_performance(sql, schema, llm)
-                        
-                    with st.expander("💡 Query Performance Insights"):
-                        st.markdown(insights)
-
                     # Save assistant response to UI state
                     st.session_state.messages.append({
                         "role": "assistant",
@@ -152,7 +156,7 @@ if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
                         "sql": sql,
                         "df": df,
                         "fig": fig,
-                        "insights": insights
+                        "insights": None
                     })
 
                     
