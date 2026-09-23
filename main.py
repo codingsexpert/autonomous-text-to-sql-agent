@@ -129,6 +129,14 @@ def generate_and_heal_sql(question, schema, llm, conn, max_retries=3, chat_histo
 def run_sql(conn, sql):
     """Run SQL on the DB. Returns (DataFrame, error_str, time_ms)."""
     start = time.perf_counter()
+    
+    # SECURITY GUARDRAIL: Block destructive queries
+    upper_sql = sql.upper()
+    dangerous_keywords = ["INSERT ", "UPDATE ", "DELETE ", "DROP ", "ALTER ", "TRUNCATE ", "REPLACE ", "CREATE "]
+    if any(keyword in upper_sql for keyword in dangerous_keywords):
+        t_ms = (time.perf_counter() - start) * 1000.0
+        return None, "Security Error: Destructive SQL operations are strictly blocked. Only READ (SELECT) queries are permitted.", t_ms
+
     try:
         df = pd.read_sql_query(sql, conn)
         t_ms = (time.perf_counter() - start) * 1000.0
