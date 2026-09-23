@@ -17,11 +17,32 @@ load_dotenv()
 # Page configuration
 st.set_page_config(page_title="Text-to-SQL Agent", layout="wide")
 
+# Custom CSS for a professional look
+st.markdown("""
+<style>
+    /* Hide Streamlit default menus */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Improve padding */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("Autonomous Text-to-SQL Agent")
-st.markdown("Ask a question in plain English, and the AI will write the SQL, heal any errors, and fetch the data from the IPL Database.")
+st.markdown("Ask a question in plain English or use Voice commands, and the AI will write the SQL, heal any errors, and fetch the data from the IPL Database.")
 
 # Sidebar for configuration
 with st.sidebar:
+    st.header("Voice Command")
+    st.markdown("Click the microphone to speak your query:")
+    audio_bytes = audio_recorder(text="", icon_size="2x", icon_name="microphone", neutral_color="#d1d5db", recording_color="#ef4444")
+    
+    st.markdown("---")
     st.header("Configuration")
     
     # Check API Key
@@ -76,12 +97,7 @@ for idx, msg in enumerate(st.session_state.messages):
                         msg["insights"] = insights
                         st.rerun()
 
-# Voice Input
-col1, col2 = st.columns([1, 11])
-with col1:
-    audio_bytes = audio_recorder(text="", icon_size="2x", icon_name="microphone", neutral_color="#d1d5db", recording_color="#ef4444")
-
-# Text Input
+# Check for voice input first
 prompt = st.chat_input("Ask a question about IPL (2021-2024)...")
 
 if audio_bytes and audio_bytes != st.session_state.get("last_audio_bytes"):
