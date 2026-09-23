@@ -9,7 +9,9 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from audio_recorder_streamlit import audio_recorder
 from main import make_llm, load_schema, generate_and_heal_sql, analyze_query_performance, transcribe_audio
+from db_logs import log_chat
 from models import MODELS
+import uuid
 
 # Load environment variables
 load_dotenv()
@@ -71,6 +73,9 @@ if "messages" not in st.session_state:
     
 if "lc_history" not in st.session_state:
     st.session_state.lc_history = []
+    
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
 
 # Display chat messages from history on app rerun
 for idx, msg in enumerate(st.session_state.messages):
@@ -95,6 +100,10 @@ for idx, msg in enumerate(st.session_state.messages):
                         schema = load_schema()
                         insights = analyze_query_performance(msg["sql"], schema, llm)
                         msg["insights"] = insights
+                        
+                        # Update the log with insights for this session
+                        log_chat(st.session_state.session_id, "system", f"Insights generated for query: {insights}")
+                        
                         st.rerun()
 
 # Check for voice input first
@@ -110,8 +119,9 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
     
-    # Add user message to UI state
+    # Add user message to UI state and log it
     st.session_state.messages.append({"role": "user", "content": prompt})
+    log_chat(st.session_state.session_id, "user", prompt)
     
     with st.chat_message("assistant"):
         with st.spinner("Agent is working (Generating SQL, running, and self-healing if needed)..."):
@@ -180,7 +190,7 @@ if prompt:
                                               margin=dict(t=50, l=20, r=20, b=20))
                             st.plotly_chart(fig, use_container_width=True)
                             
-                    # Save assistant response to UI state
+                    # Save assistant response to UI state and log it
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": response_text,
@@ -189,6 +199,7 @@ if prompt:
                         "fig": fig,
                         "insights": None
                     })
+                    log_chat(st.session_state.session_id, "assistant", response_text, sql_generated=sql)
 
                     
                     # Save context to LangChain history
