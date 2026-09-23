@@ -15,7 +15,7 @@ This agent translates natural language questions into executable SQL queries aga
 - **Voice-to-SQL Interface:** Integrated Groq Whisper-large-v3 model allows users to query the database using natural language speech, transcribed with ultra-low latency.
 - **Persistent AI Conversational Memory:** Implements production-grade session management and chat logging via a dedicated SQLite database, permanently recording all user prompts, LLM generations, and AI insights.
 - **Dynamic Visualization:** Automatically renders SQL output into Plotly charts (Bar, Donut, Area) for high-level exploratory data analysis without writing UI code.
-- **Security Guardrails:** Read-only execution environment blocks destructive commands (DROP, DELETE, UPDATE) mitigating prompt injection vulnerabilities.
+- **Security & Performance Guardrails:** Read-only execution environment blocks destructive commands (DROP, DELETE, UPDATE) to prevent prompt injection. An Auto-Limit 100 filter prevents UI crashes and memory exhaustion from massive data retrievals.
 
 ---
 
