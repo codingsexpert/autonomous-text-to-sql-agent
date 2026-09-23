@@ -189,6 +189,10 @@ def run_sql(conn, sql):
         t_ms = (time.perf_counter() - start) * 1000.0
         return None, "Security Error: Destructive SQL operations are strictly blocked. Only READ (SELECT) queries are permitted.", t_ms
 
+    # PERFORMANCE GUARDRAIL: Auto-Limit to 100 rows to prevent RAM/UI crashes
+    if "LIMIT" not in upper_sql:
+        sql = sql.rstrip(";") + " LIMIT 100"
+
     try:
         df = pd.read_sql_query(sql, conn)
         t_ms = (time.perf_counter() - start) * 1000.0
