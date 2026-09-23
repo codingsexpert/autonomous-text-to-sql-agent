@@ -96,7 +96,13 @@ if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
                     
                     fig = None
                     # Auto-Charts Logic
+                    import pandas as pd
+                    
                     if len(df) > 0 and len(df.columns) >= 2:
+                        # SQLite COUNT(*) often returns as object/string. We must coerce to numeric where possible.
+                        for col in df.columns:
+                            df[col] = pd.to_numeric(df[col], errors='ignore')
+                            
                         numerics = df.select_dtypes(include=['number']).columns.tolist()
                         categoricals = df.select_dtypes(exclude=['number']).columns.tolist()
                         
