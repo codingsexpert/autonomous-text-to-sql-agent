@@ -9,3 +9,5 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+chat_logs.db
+query_cache.json
