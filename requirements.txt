@@ -5,3 +5,5 @@ langchain-core>=0.2.0
 pandas>=2.0.0
 python-dotenv>=1.0.0
 plotly>=5.0.0
+audio-recorder-streamlit>=0.0.8
+groq>=0.5.0

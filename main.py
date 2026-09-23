@@ -25,6 +25,8 @@ import json
 import sqlite3
 import pandas as pd
 from dotenv import load_dotenv
+import tempfile
+from groq import Groq
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -36,7 +38,31 @@ from evaluator import evaluate_one
 # ---------- CONFIG ----------
 load_dotenv()
 API_KEY = os.getenv("GROQ_API_KEY")
+groq_client = Groq(api_key=API_KEY)
 
+def transcribe_audio(audio_bytes):
+    """Takes audio bytes, saves to a temp file, and transcribes using Groq Whisper."""
+    if not audio_bytes:
+        return ""
+        
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
+            tmp_file.write(audio_bytes)
+            tmp_file_path = tmp_file.name
+            
+        with open(tmp_file_path, "rb") as f:
+            transcription = groq_client.audio.transcriptions.create(
+                file=(tmp_file_path, f.read()),
+                model="whisper-large-v3",
+                response_format="json",
+                language="en"
+            )
+            
+        os.remove(tmp_file_path)
+        return transcription.text
+    except Exception as e:
+        print(f"Audio transcription error: {e}")
+        return ""
 DB_PATH = "ipl_2021_2024.db"
 SCHEMA_PATH = "schema.sql"
 GOLDEN_PATH = "golden_dataset.csv"

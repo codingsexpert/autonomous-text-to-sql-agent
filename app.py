@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 # Import LangChain message types for history
 from langchain_core.messages import HumanMessage, AIMessage
 
-# Import backend logic from our existing files
-from main import make_llm, load_schema, generate_and_heal_sql, analyze_query_performance
+from audio_recorder_streamlit import audio_recorder
+from main import make_llm, load_schema, generate_and_heal_sql, analyze_query_performance, transcribe_audio
 from models import MODELS
 
 # Load environment variables
@@ -65,10 +65,10 @@ for idx, msg in enumerate(st.session_state.messages):
         # Lazy Loading of Insights
         if msg["role"] == "assistant" and "sql" in msg and msg["df"] is not None:
             if "insights" in msg and msg["insights"]:
-                with st.expander("💡 Query Performance Insights"):
+                with st.expander("Query Performance Insights"):
                     st.markdown(msg["insights"])
             else:
-                if st.button("Analyze Query Performance 💡", key=f"analyze_{idx}"):
+                if st.button("Analyze Query Performance", key=f"analyze_{idx}"):
                     with st.spinner("Analyzing query performance..."):
                         llm = make_llm(selected_slug)
                         schema = load_schema()
@@ -76,8 +76,20 @@ for idx, msg in enumerate(st.session_state.messages):
                         msg["insights"] = insights
                         st.rerun()
 
-# Main interface for chat input
-if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
+# Voice Input
+col1, col2 = st.columns([1, 11])
+with col1:
+    audio_bytes = audio_recorder(text="", icon_size="2x", icon_name="microphone", neutral_color="#d1d5db", recording_color="#ef4444")
+
+# Text Input
+prompt = st.chat_input("Ask a question about IPL (2021-2024)...")
+
+if audio_bytes and audio_bytes != st.session_state.get("last_audio_bytes"):
+    st.session_state.last_audio_bytes = audio_bytes
+    with st.spinner("Transcribing audio..."):
+        prompt = transcribe_audio(audio_bytes)
+
+if prompt:
     # Display user message in chat message container
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -100,7 +112,7 @@ if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
                 
                 if df is not None:
                     if is_cached:
-                        response_text = f"⚡ **Cache Hit!** Data fetched instantly in {exec_time:.2f} ms (LLM bypassed)."
+                        response_text = f"**Cache Hit!** Data fetched instantly in {exec_time:.2f} ms (LLM bypassed)."
                     else:
                         response_text = f"Data fetched successfully in {exec_time:.2f} ms with {retries} retries."
                     st.success(response_text)
