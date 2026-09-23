@@ -79,7 +79,7 @@ def clean_sql(raw):
     return text.strip().strip("`").rstrip(";").strip("`").strip()
 
 
-def generate_and_heal_sql(question, schema, llm, conn, max_retries=3):
+def generate_and_heal_sql(question, schema, llm, conn, max_retries=3, chat_history=None):
     """
     Generates SQL, executes it, and self-heals if there are SQL errors.
     Returns (final_sql, df, retries_used, exec_time_ms, final_error)
@@ -90,10 +90,11 @@ def generate_and_heal_sql(question, schema, llm, conn, max_retries=3):
         "Return only the SQL query. Do not include explanations."
     ))
     
-    messages = [
-        system_msg,
-        HumanMessage(content=f"Schema:\n{schema}\n\nQuestion: {question}\n\nSQL:")
-    ]
+    messages = [system_msg]
+    if chat_history:
+        messages.extend(chat_history)
+        
+    messages.append(HumanMessage(content=f"Schema:\n{schema}\n\nQuestion: {question}\n\nSQL:"))
     
     for attempt in range(max_retries + 1):
         response = llm.invoke(messages)
