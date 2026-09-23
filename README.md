@@ -10,21 +10,27 @@ This agent translates natural language questions into executable SQL queries aga
 
 - **Blazing Fast LPU Inference:** Uses Groq Cloud LPUs with models like Qwen 27B for sub-second query generation and execution.
 - **Autonomous Self-Healing Feedback Loop:** When a generated SQL fails execution on the database engine, the agent dynamically captures the SQLite error trace, constructs a targeted debugging prompt, and iteratively repairs the query (up to 3 retries).
-- **Value-Based Execution Accuracy Evaluator:** Includes an advanced evaluation suite (`evaluator.py`) testing execution accuracy against golden datasets with flexible column-count tolerance (Path A subset matching).
-- **Clean Interactive UI:** Streamlit-powered dashboard showing query generation latency (ms), retry counts, formatted SQL output, and interactive data tables.
-- **Secure & Modular:** Environment-variable isolation for API keys, modular database abstraction, and clean separation between agent orchestration and evaluation.
+- **Exact-Match Query Caching:** In-memory semantic caching architecture delivers 0ms latency for repeated queries, completely bypassing LLM roundtrips and optimizing API costs.
+- **AI Database Administrator (DBA):** Multi-agent architecture featuring a secondary AI agent that critically analyzes execution plans (EXPLAIN QUERY PLAN) to recommend indexing strategies and query optimizations.
+- **Voice-to-SQL Interface:** Integrated Groq Whisper-large-v3 model allows users to query the database using natural language speech, transcribed with ultra-low latency.
+- **Persistent AI Conversational Memory:** Implements production-grade session management and chat logging via a dedicated SQLite database, permanently recording all user prompts, LLM generations, and AI insights.
+- **Dynamic Visualization:** Automatically renders SQL output into Plotly charts (Bar, Donut, Area) for high-level exploratory data analysis without writing UI code.
+- **Security Guardrails:** Read-only execution environment blocks destructive commands (DROP, DELETE, UPDATE) mitigating prompt injection vulnerabilities.
 
 ---
 
 ## Architecture & Workflow
 
 ```text
-User Question (Plain English)
+User Question (Voice or Text)
              │
              ▼
-   [ Streamlit UI / app.py ]
+   [ Streamlit UI / app.py ] ◄───► [ chat_logs.db (Conversational Memory) ]
              │
              ▼
+  [ Query Cache / query_cache.json ] ──► (Instant Cache Hit Return)
+             │
+             ▼ (Cache Miss)
   [ Schema Extraction + Context ]
              │
              ▼
@@ -53,7 +59,8 @@ User Question (Plain English)
 
 ```text
 ├── app.py                      # Interactive Streamlit Web UI
-├── main.py                     # Core agent logic & self-healing loop
+├── main.py                     # Core agent logic, caching & self-healing loop
+├── db_logs.py                  # Persistent conversational memory and logging
 ├── evaluator.py                # Value-based execution accuracy comparison
 ├── models.py                   # Configured AI models on Groq
 ├── db.py                       # Database connection and helper utilities
@@ -117,7 +124,7 @@ This will:
 
 ---
 
-## System Architecture & Scalability Optimizations ⚡
+## System Architecture & Scalability Optimizations
 This project is built mimicking **Production-Grade Data Engineering Systems**. It includes several advanced optimization strategies for latency reduction and LLM safety:
 
 ### 1. In-Memory Exact Match Caching
