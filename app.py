@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Import backend logic from our existing files
-from main import make_llm, load_schema, generate_and_heal_sql
+from main import make_llm, load_schema, generate_and_heal_sql, analyze_query_performance
 from models import MODELS
 
 # Load environment variables
@@ -61,6 +61,9 @@ for msg in st.session_state.messages:
             st.dataframe(msg["df"], use_container_width=True)
         if "fig" in msg and msg["fig"] is not None:
             st.plotly_chart(msg["fig"], use_container_width=True)
+        if "insights" in msg and msg["insights"]:
+            with st.expander("💡 Query Performance Insights"):
+                st.markdown(msg["insights"])
 
 # Main interface for chat input
 if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
@@ -71,10 +74,6 @@ if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
     # Add user message to UI state
     st.session_state.messages.append({"role": "user", "content": prompt})
     
-    # Add user message to LangChain state (for context only, the generate function wraps it too, but we need past ones)
-    # Wait, the generate_and_heal_sql appends its own HumanMessage containing schema, question, SQL prompt.
-    # So we just pass the history up to this point.
-
     with st.chat_message("assistant"):
         with st.spinner("Agent is working (Generating SQL, running, and self-healing if needed)..."):
             # Initialize connections
@@ -139,14 +138,23 @@ if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
                                               margin=dict(t=50, l=20, r=20, b=20))
                             st.plotly_chart(fig, use_container_width=True)
                             
+                    # --- QUERY PERFORMANCE OPTIMIZER ---
+                    with st.spinner("Analyzing query performance..."):
+                        insights = analyze_query_performance(sql, schema, llm)
+                        
+                    with st.expander("💡 Query Performance Insights"):
+                        st.markdown(insights)
+
                     # Save assistant response to UI state
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": response_text,
                         "sql": sql,
                         "df": df,
-                        "fig": fig
+                        "fig": fig,
+                        "insights": insights
                     })
+
                     
                     # Save context to LangChain history
                     st.session_state.lc_history.append(HumanMessage(content=prompt))

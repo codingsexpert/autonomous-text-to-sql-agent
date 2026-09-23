@@ -146,6 +146,27 @@ def run_sql(conn, sql):
         return None, str(e), t_ms
 
 
+def analyze_query_performance(sql, schema, llm):
+    """
+    Acts as a Senior DBA to critique the generated SQL query.
+    Returns a markdown string containing the optimization analysis.
+    """
+    sys_msg = SystemMessage(content=(
+        "You are a Senior Database Administrator and Data Engineer. "
+        "Analyze the provided SQL query against the schema for performance bottlenecks. "
+        "Return a brief Markdown response with three sections: "
+        "1. **Optimization Score**: Give a score out of 100. "
+        "2. **Bottlenecks**: E.g. full table scans, missing JOIN optimizations, suboptimal aggregations. "
+        "3. **Recommendations**: E.g. specific indexes to add, rewriting subqueries."
+    ))
+    messages = [
+        sys_msg,
+        HumanMessage(content=f"Schema:\n{schema}\n\nQuery:\n{sql}\n\nAnalysis:")
+    ]
+    response = llm.invoke(messages)
+    return response.content
+
+
 def gold_result_to_df(gold_result_json):
     """Rebuild the gold result DataFrame from the stored JSON."""
     obj = json.loads(gold_result_json)
