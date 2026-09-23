@@ -109,15 +109,34 @@ if prompt := st.chat_input("Ask a question about IPL (2021-2024)..."):
                         if len(numerics) > 0 and len(categoricals) > 0:
                             x_col = categoricals[0]
                             y_col = numerics[0]
-                            chart_df = df.head(50) if len(df) > 50 else df
-                            fig = px.bar(chart_df, x=x_col, y=y_col, title=f"{y_col.title()} by {x_col.title()}",
-                                         template="plotly_white", color=x_col)
+                            
+                            # Sort the dataframe for better visualization
+                            chart_df = df.sort_values(by=y_col, ascending=False).head(20)
+                            
+                            # Choose chart type dynamically
+                            if chart_df[x_col].nunique() <= 7:
+                                # Donut chart for few categories
+                                fig = px.pie(chart_df, names=x_col, values=y_col, hole=0.4,
+                                             title=f"<b>{y_col.title()} by {x_col.title()}</b>",
+                                             color_discrete_sequence=px.colors.qualitative.Pastel)
+                                fig.update_traces(textposition='inside', textinfo='percent+label')
+                            else:
+                                # Beautiful Bar chart for many categories
+                                fig = px.bar(chart_df, x=x_col, y=y_col, 
+                                             title=f"<b>Top {len(chart_df)} {x_col.title()} by {y_col.title()}</b>",
+                                             color=y_col, color_continuous_scale="Viridis")
+                                
+                            fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
+                                              margin=dict(t=50, l=20, r=20, b=20))
                             st.plotly_chart(fig, use_container_width=True)
+                            
                         elif len(numerics) >= 2:
                             x_col = numerics[0]
                             y_col = numerics[1]
-                            fig = px.line(df, x=x_col, y=y_col, title=f"{y_col.title()} vs {x_col.title()}",
-                                          template="plotly_white")
+                            fig = px.area(df, x=x_col, y=y_col, title=f"<b>{y_col.title()} vs {x_col.title()}</b>",
+                                          color_discrete_sequence=["#00b4d8"])
+                            fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", 
+                                              margin=dict(t=50, l=20, r=20, b=20))
                             st.plotly_chart(fig, use_container_width=True)
                             
                     # Save assistant response to UI state
